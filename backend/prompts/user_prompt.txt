@@ -1,0 +1,9 @@
+Based on the context provided, please answer the following question:
+
+{query}
+
+Remember to:
+- Only use information from the provided context
+- Structure your response with all required sections
+- Use simple, clear language
+- Include the mandatory disclaimer
