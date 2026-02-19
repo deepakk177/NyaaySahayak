@@ -1,0 +1,65 @@
+version: "3.8"
+
+# ============================================================
+# NyaySahayak — Docker Compose
+# Usage:  docker-compose up --build
+# ============================================================
+
+services:
+
+  # ── PostgreSQL Database ─────────────────────────────────────
+  db:
+    image: postgres:14-alpine
+    container_name: legal_db
+    restart: always
+    environment:
+      POSTGRES_DB: legal_assistant
+      POSTGRES_USER: legal_user
+      POSTGRES_PASSWORD: legal123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U legal_user -d legal_assistant" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── NyaySahayak Application ─────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: legal_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy # wait for Postgres to be ready
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      # Override localhost DB URL → point to the 'db' service
+      DATABASE_URL: postgresql://legal_user:legal123@db:5432/legal_assistant
+    volumes:
+      # Mount source code for live reloads during development
+      - .:/app
+      # Keep FAISS index + uploaded docs persistent
+      - faiss_data:/app/data/faiss_index
+      - uploads_data:/app/data/uploads
+      - logs_data:/app/logs
+    # Streamlit is accessible at http://localhost:8501
+
+    # ── Named Volumes ───────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  faiss_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
